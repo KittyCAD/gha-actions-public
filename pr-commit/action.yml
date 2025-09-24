@@ -36,8 +36,11 @@ runs:
         app-id: ${{ inputs.app-id }}
         private-key: ${{ inputs.private-key }}
         owner: ${{ inputs.owner }}
-
+    - name: Check for modified files
+      id: git-check
+      run: echo "modified=$(if [[ -z $(git status --porcelain --untracked-files=no --ignore-submodules) ]]; then echo "false"; else echo "true"; fi)" >> "$GITHUB_OUTPUT"
     - name: Commit and push changes
+      if: steps.git-check.outputs.modified == 'true'
       id: commit
       shell: bash
       run: |
@@ -51,16 +54,11 @@ runs:
         git fetch origin
         git add .
         
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
-          echo "Changes detected, committing..."
 
-          git commit -am "${{ inputs.commit-message }}" || {
-            echo "Commit failed"
-            exit 1
-          }
-        fi
+        git commit -am "${{ inputs.commit-message }}" || {
+          echo "Commit failed"
+          exit 1
+        }
 
         git push origin ${{github.event.pull_request.head.ref }}|| {
           echo "Push failed"
