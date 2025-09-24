@@ -1,0 +1,72 @@
+name: 'PR Commit'
+description: 'Commit and push changes to a pull request branch using GitHub App authentication'
+author: 'KittyCAD'
+
+inputs:
+  app-id:
+    description: 'GitHub App ID for authentication'
+    required: true
+  private-key:
+    description: 'GitHub App private key for authentication'
+    required: true
+  owner:
+    description: 'Repository owner (defaults to current repository owner)'
+    required: false
+    default: ${{ github.repository_owner }}
+  commit-message:
+    description: 'Commit message for the changes'
+    required: false
+    default: 'Changes from previous commit'
+  user-email:
+    description: 'Git user email for commits'
+    required: false
+    default: 'zoo-github-actions-auth[bot]@users.noreply.github.com'
+  user-name:
+    description: 'Git user name for commits'
+    required: false
+    default: 'zoo-github-actions-auth[bot]'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate GitHub App Token
+      uses: actions/create-github-app-token@v2
+      id: app-token
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: ${{ inputs.owner }}
+
+    - name: Commit and push changes
+      id: commit
+      shell: bash
+      run: |
+        # Cleanup auth potentially added by checkout action
+        git config --local --unset-all http.https://github.com/.extraheader || true
+        git config --local user.email "${{ inputs.user-email }}"
+        git config --local user.name "${{ inputs.user-name }}"
+        
+        # Set up authentication
+        git remote set-url origin https://${{ github.actor }}:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git
+        git fetch origin
+        git add .
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          echo "Changes detected, committing..."
+
+          git commit -am "${{ inputs.commit-message }}" || {
+            echo "Commit failed"
+            exit 1
+          }
+        fi
+
+        git push origin ${{github.event.pull_request.head.ref }}|| {
+          echo "Push failed"
+          exit 1
+        }
+
+branding:
+  icon: 'git-commit'
+  color: 'blue'
