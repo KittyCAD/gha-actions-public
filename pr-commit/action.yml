@@ -41,7 +41,6 @@ runs:
       run: echo "modified=$(if [[ -z $(git status --porcelain --untracked-files=no --ignore-submodules) ]]; then echo "false"; else echo "true"; fi)" >> "$GITHUB_OUTPUT"
     - name: Commit and push changes
       if: steps.git-check.outputs.modified == 'true'
-      id: commit
       shell: bash
       run: |
         # Cleanup auth potentially added by checkout action
