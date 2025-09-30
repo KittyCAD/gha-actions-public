@@ -52,6 +52,9 @@ runs:
         # Set up authentication
         git remote set-url origin https://${{ github.actor }}:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git
         git fetch origin
+        # Checkout branch in case the head is detached
+        git checkout ${{ github.event.pull_request.head.ref }} 
+        
         git add .
         
 
