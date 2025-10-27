@@ -26,6 +26,11 @@ inputs:
     required: false
     default: 'zoo-github-actions-auth[bot]'
 
+outputs:
+  commited:
+    description: 'Whether a commit & push was made'
+    value: ${{ steps.git-check.outputs.modified }}
+
 runs:
   using: 'composite'
   steps:
