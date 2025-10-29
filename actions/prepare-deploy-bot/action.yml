@@ -1,0 +1,65 @@
+name: prepare-deploy-bot
+description: Download deploy-bot from release or override artifact and expose executable path
+inputs:
+  github-token:
+    description: Token with permission to download releases or artifacts
+    required: true
+  override-run-id:
+    description: GitHub Actions run id containing deploy-bot artifact
+    required: false
+  repository:
+    description: Repository hosting deploy-bot (owner/repo)
+    required: false
+    default: KittyCAD/deploy-bot
+  artifact-name:
+    description: Artifact name to download when override-run-id is provided
+    required: false
+    default: deploy-bot-${{ github.run_id }}
+outputs:
+  deploy-bot-path:
+    description: Path to deploy-bot binary added to PATH
+    value: ${{ steps.finalize.outputs.path }}
+runs:
+  using: composite
+  steps:
+    - name: Prepare directories
+      shell: bash
+      run: |
+        mkdir -p "$RUNNER_TEMP/deploy-bot"
+        mkdir -p "$RUNNER_TEMP/deploy-bot-download"
+
+    - name: Download override artifact
+      if: inputs.override-run-id != ''
+      uses: actions/download-artifact@v4
+      with:
+        run-id: ${{ inputs.override-run-id }}
+        repository: ${{ inputs.repository }}
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/deploy-bot-download
+        github-token: ${{ inputs.github-token }}
+
+    - name: Fetch release if needed
+      if: inputs.override-run-id == ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ inputs.repository }}
+        DEST: ${{ runner.temp }}/deploy-bot-download
+      run: |
+        gh release download --repo "$REPO" --pattern "deploy-bot-x86_64-unknown-linux*" --output - | tar xz -C "$DEST"
+
+    - name: Unpack artifact tarball if present
+      shell: bash
+      env:
+        DOWNLOAD_DIR: ${{ runner.temp }}/deploy-bot-download
+        TARGET_DIR: ${{ runner.temp }}/deploy-bot
+      id: finalize
+      run: |
+        if compgen -G "$DOWNLOAD_DIR/deploy-bot-*.tar.gz" > /dev/null; then
+          tar xzf "$DOWNLOAD_DIR"/deploy-bot-*.tar.gz -C "$TARGET_DIR"
+        else
+          cp "$DOWNLOAD_DIR"/deploy-bot "$TARGET_DIR"/
+        fi
+        chmod +x "$TARGET_DIR/deploy-bot"
+        echo "$TARGET_DIR" >> "$GITHUB_PATH"
+        echo "path=$TARGET_DIR/deploy-bot" >> "$GITHUB_OUTPUT"
