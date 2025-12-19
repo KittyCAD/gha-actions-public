@@ -20,5 +20,7 @@ runs:
       shell: bash
       run: |
         # Support for two different URL formats for SSH pulling
-        git config --global --add url.https://git:${{ steps.app-token.outputs.token }}@github.com/.insteadOf ssh://git@github.com/
-        git config --global --add url.https://git:${{ steps.app-token.outputs.token }}@github.com/.insteadOf git@github.com:
+        git config --global --add "url.https://git:$APP_TOKEN@github.com/.insteadOf" ssh://git@github.com/
+        git config --global --add "url.https://git:$APP_TOKEN@github.com/.insteadOf" git@github.com:
+      env:
+        APP_TOKEN: ${{ steps.app-token.outputs.token }}
