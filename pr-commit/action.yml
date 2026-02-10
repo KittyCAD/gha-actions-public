@@ -51,6 +51,15 @@ runs:
       run: |
         # Cleanup auth potentially added by checkout action
         git config --local --unset-all http.https://github.com/.extraheader || true
+        PATHS=(
+          "$(pwd)"
+          "/github/workspace"
+        )
+        for ROOT in "${PATHS[@]}"; do
+          git config --local --unset-all "includeIf.gitdir:${ROOT}/.git.path" || true
+          git config --local --unset-all "includeIf.gitdir:${ROOT}/.git/worktrees/*.path" || true
+        done
+        
         git config --local user.email "${{ inputs.user-email }}"
         git config --local user.name "${{ inputs.user-name }}"
         
